@@ -19,9 +19,13 @@ public:
 
     void initVars();
 
-    bool  readUSB();
+    bool  connect();
 
-    bool  configSerial(QString, QString);
+    bool  configSerial(QString);
+
+    bool writeToSerial(QString);
+
+    bool readFromSerial();
 
     bool refreshData();
 
