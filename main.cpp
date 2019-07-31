@@ -6,9 +6,9 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     MainWindow w;
 
-    w.setWindowIcon(QIcon("./favicon.png"));
+    w.setWindowIcon(QIcon(":/new/prefix1/favicon.png"));
     w.show();
-    QIcon icon("./favicon.png");
+    QIcon icon(":/new/prefix1/favicon.png");
 
 
     a.setWindowIcon(icon);
