@@ -15,16 +15,14 @@
 
 #define blankString ""
 
-QDate today = QDate::currentDate();
-int totalTime, riseTime;
-double amps;
-qint64 epoch1, epoch2, epochToday;
-bool connected = false;
-QString description, manufacturer, serialNumber, vendorId, serialPortId;
-char* charVendorId;
-QSerialPort serialPort;
-QByteArray readData;
-const char *msgtst;
+static QDate today = QDate::currentDate();
+static int totalTime, riseTime;
+static double amps;
+static qint64 epoch1, epoch2, epochToday;
+static QString description, manufacturer, serialNumber, vendorId, serialPortId;
+static QSerialPort serialPort;
+static QByteArray readData;
+static const char *msgtst;
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -143,6 +141,8 @@ bool  MainWindow::connect()
             return(MainWindow::configSerial(serialPortId));
         }
     }
+
+    return false;//To avoid warning (non-void function)
 }
 
 
@@ -187,6 +187,7 @@ bool MainWindow::writeToSerial(QString msg)
             qDebug() << tr("Message of size %1 succesfully sent.").arg(bytesWritten);
             return true;
         }
+        return false; //To avoid warning (non-void function)
 }
 
 bool MainWindow::readFromSerial()
