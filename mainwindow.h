@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+
 namespace Ui {
 class MainWindow;
 }
@@ -28,6 +29,8 @@ public:
     bool readFromSerial();
 
     bool refreshData();
+
+    void delay();
 
 private slots:
     void on_pushButton_2_clicked();
