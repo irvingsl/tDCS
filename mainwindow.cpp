@@ -12,8 +12,9 @@
 #include <QSerialPort>
 #include <QSerialPortInfo>
 #include <QFile>
+#include <QThread>
+#include <QTimer>
 
-#define blankString ""
 
 static QDate today = QDate::currentDate();
 static int totalTime, riseTime;
@@ -22,8 +23,6 @@ static qint64 epoch1, epoch2, epochToday;
 static QString description, manufacturer, serialNumber, vendorId, serialPortId;
 static QSerialPort serialPort;
 static QByteArray readData;
-static const char *msgtst;
-
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -50,22 +49,25 @@ void MainWindow::on_pushButton_2_clicked()//Botão conectar
     static bool btn2 = true;
     if(btn2)
     {
-        if(MainWindow::connect())
+        qDebug() << "Conectando" << endl;
+        if(MainWindow::connect() && MainWindow::readFromSerial())
         {
             ui->statusBar->showMessage("Conectado!");
-            ui->pushButton_2->setText("Desconectar");
-            MainWindow::readFromSerial();
+            ui->pushButton_2->setText("Desconectar");            
             btn2 = false;
          }
         else
         {
             ui->statusBar->showMessage("Não foi possível conectar");
             ui->label_7->setText("Não foi possível conectar");
+            serialPort.close();
             return;
         }
     }
     else
     {
+
+        qDebug() << "Desconectando" << endl;
         serialPort.close();
         ui->label_7->setText("Nenhum dispositivo conectado");
         ui->statusBar->showMessage("Nenhum dispositivo conectado");
@@ -97,15 +99,26 @@ void MainWindow::on_pushButton_4_clicked()//Botão salvar
     epoch2 = DateTime2.toSecsSinceEpoch();
     epochToday = QDateTime::currentSecsSinceEpoch();
 
-    auto serialize = QStringLiteral("%1#%2#%3#%4#%5#%6\n").arg(amps).arg(riseTime).arg(totalTime).arg(epoch1).arg(epoch2).arg(epochToday);
+    auto serialize = QStringLiteral("%1#%2#%3#%4#%5#%6#\n").arg(amps).arg(riseTime).arg(totalTime).arg(epoch1).arg(epoch2).arg(epochToday);
+    qDebug() << "Serialize: " << serialize;
 
-    if(MainWindow::writeToSerial(serialize))
-    {
-    QMessageBox::information(this, "tDCS", "Dados salvos com sucesso!");
+    MainWindow::writeToSerial(serialize);
+       MainWindow::delay();
+
+
+        MainWindow::on_pushButton_2_clicked();
+        MainWindow::on_pushButton_2_clicked();
+
+
+        qDebug() << readData << endl << serialize << endl;
+        qDebug() << ((readData == serialize) ? "Iguais" : "Diferentes");
+       if (readData == serialize)
+       {
+        QMessageBox::information(this, "tDCS", "Dados salvos com sucesso!");
     }
     else
     {
-    QMessageBox::warning(this, "tDCS", "Não foi possível salvar os dados, favor conferir a conexão.");
+        QMessageBox::warning(this, "tDCS", "Não foi possível salvar os dados, favor conferir a conexão.");
     }
 }
 
@@ -121,6 +134,7 @@ void MainWindow::initVars()
 
 bool  MainWindow::connect()
 {
+    qDebug() << "Entered connect func" << endl;
     const auto serialPortInfos = QSerialPortInfo::availablePorts();
 
     for (const QSerialPortInfo &serialPortInfo : serialPortInfos)
@@ -134,7 +148,9 @@ bool  MainWindow::connect()
         qDebug() << serialScan << endl;
 
         //if(description=="USB-SERIAL CH340" && manufacturer=="wch.cn" && vendorId == "\u0086")
-        if(description=="Virtual Serial Port 9 (Electronic Team)" && manufacturer=="Electronic Team")// && vendorId == "\u0000")
+        if(description=="Silicon Labs CP210x USB to UART Bridge" && manufacturer=="Silicon Labs")
+
+       //if(description=="Virtual Serial Port 9 (Electronic Team)" && manufacturer=="Electronic Team")
         {
             serialPortId = serialPortInfo.portName();
             qDebug()  << "Port: " << serialPortInfo.portName() << endl;
@@ -145,12 +161,9 @@ bool  MainWindow::connect()
     return false;//To avoid warning (non-void function)
 }
 
-
-
-
-
 bool  MainWindow::configSerial(QString serialPortName)
 {
+    qDebug() << "Entered configSerial func" << endl;
     if(serialPort.isOpen())
     {
         return true;
@@ -168,33 +181,42 @@ bool  MainWindow::configSerial(QString serialPortName)
 
 }
 
+
+//TODO: Salvando mesmo quando não há resposta
+
 bool MainWindow::writeToSerial(QString msg)
 {
-        const qint64 bytesWritten = serialPort.write(msg.toUtf8());
-        if (bytesWritten == -1)
-        {
-            qDebug() << QObject::tr("Failed to write the data to port %1, error: %2")
-                .arg(serialPort.portName()).arg(serialPort.errorString()) << endl;
-            return false;
-        }
-        else if (bytesWritten != msg.size())
-        {
-            qDebug()  << QObject::tr("Failed to write all the data to port %1, error: %2, sizes: written: %3, in msg: %4")
-                .arg(serialPort.portName()).arg(serialPort.errorString()).arg(bytesWritten).arg(msg.size()) << endl;
-        }
-        else
-        {
-            qDebug() << tr("Message of size %1 succesfully sent.").arg(bytesWritten);
-            return true;
-        }
-        return false; //To avoid warning (non-void function)
+
+    qDebug() << "Entered write func" << endl;
+    const qint64 bytesWritten = serialPort.write(msg.toUtf8());
+
+
+
+    if (bytesWritten == -1)
+    {
+        qDebug() << QObject::tr("Failed to write the data to port %1, error: %2")
+            .arg(serialPort.portName()).arg(serialPort.errorString()) << endl;
+        return false;
+    }
+    else if (bytesWritten != msg.size())
+    {
+        qDebug()  << QObject::tr("Failed to write all the data to port %1, error: %2, sizes: written: %3, in msg: %4")
+            .arg(serialPort.portName()).arg(serialPort.errorString()).arg(bytesWritten).arg(msg.size()) << endl;
+    }
+    else
+    {
+        qDebug() << tr("Message of size %1 succesfully sent.").arg(bytesWritten);
+        return true;
+    }
+    return false; //To avoid warning (non-void function)
 }
 
 bool MainWindow::readFromSerial()
 {
-     MainWindow::writeToSerial("@R");
+    qDebug() << "Entered read func" << endl;
+     MainWindow::writeToSerial("@R\n");
      readData = serialPort.readAll();
-     while (serialPort.waitForReadyRead(5000))
+     while (serialPort.waitForReadyRead(3000) )
      {
         readData.append(serialPort.readAll());
     }
@@ -210,10 +232,48 @@ bool MainWindow::readFromSerial()
          return false;
      }
 
+
      qDebug() << QObject::tr("Data successfully received from port %1")
                        .arg(serialPort.portName()) << endl;
-     qDebug() << readData << endl;//"3#5#25#1564542000#1565406000#1564613095"
-     return true;
+     qDebug() << readData << endl;
+
+     return MainWindow::refreshData();
 }
 
+bool MainWindow::refreshData()
+{
+    if(readData.size() < 20)
+    {
+        return false;
+    }
+    else
+    {
+        auto parts = readData.split('#');
 
+        QDateTime parts3, parts4, parts5;
+        parts3.setTime_t(parts[3].toInt());
+        parts4.setTime_t(parts[4].toInt());
+        parts5.setTime_t(parts[5].toInt());
+
+        auto dateStart =  parts3.toString(Qt::SystemLocaleShortDate).split(' ');//Divide as Strings em 2 partes: data/hora
+        auto dateEnd =  parts4.toString(Qt::SystemLocaleShortDate).split(' ');
+
+        QString printables = "Dados configurados no dispositivo:\nCorrente: "+parts[0]
+               +" mA\nTempo de subida: "+parts[1]
+               +" minutos\nTempo total: "+parts[2]
+               +" minutos\nData de início: "+dateStart[0]//Utiliza apenas a data
+               +"\nData final: "+dateEnd[0]
+               +"\n\nSalvo em: "+parts5.toString(Qt::SystemLocaleShortDate);
+
+       ui->label_7->setText(printables);
+
+       return true;
+    }
+}
+
+void MainWindow::delay()
+{
+    QTime dieTime= QTime::currentTime().addMSecs(2000);
+    while (QTime::currentTime() < dieTime)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+}
