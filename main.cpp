@@ -8,10 +8,6 @@ int main(int argc, char *argv[])
 
     w.setWindowIcon(QIcon(":/new/prefix1/favicon.png"));
     w.show();
-    QIcon icon(":/new/prefix1/favicon.png");
-
-
-    a.setWindowIcon(icon);
 
     return a.exec();
 }

@@ -1,28 +1,21 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QMessageBox>
-#include <string>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QJsonDocument>
 #include <QDebug>
-#include <QCryptographicHash>
 #include <QCoreApplication>
 #include <QTextStream>
 #include <QSerialPort>
 #include <QSerialPortInfo>
-#include <QFile>
-#include <QThread>
 #include <QTimer>
-
 
 static QDate today = QDate::currentDate();
 static int totalTime, riseTime;
 static double amps;
 static qint64 epoch1, epoch2, epochToday;
-static QString description, manufacturer, serialNumber, vendorId, serialPortId;
+static QString description, manufacturer, serialNumber, serialPortId;
 static QSerialPort serialPort;
 static QByteArray readData;
+static quint16 vendorId;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -50,6 +43,8 @@ void MainWindow::on_pushButton_2_clicked()//Botão conectar
     if(btn2)
     {
         qDebug() << "Conectando" << endl;
+        ui->label_7->setText("Conectando...");
+        ui->statusBar->showMessage("Conectando...");
         if(MainWindow::connect() && MainWindow::readFromSerial())
         {
             ui->statusBar->showMessage("Conectado!");
@@ -85,7 +80,9 @@ void MainWindow::on_pushButton_3_clicked()//Botão limpar
 }
 
 void MainWindow::on_pushButton_4_clicked()//Botão salvar
-{
+{    
+    ui->statusBar->showMessage("Salvando...");
+    ui->label_7->setText("Salvando...");
     amps = ui->doubleSpinBox->value();
     riseTime = ui->spinBox->value();
     totalTime = ui->spinBox_2->value();
@@ -103,17 +100,14 @@ void MainWindow::on_pushButton_4_clicked()//Botão salvar
     qDebug() << "Serialize: " << serialize;
 
     MainWindow::writeToSerial(serialize);
-       MainWindow::delay();
+    MainWindow::delay_ms(2000);
 
+    MainWindow::on_pushButton_2_clicked();
+    MainWindow::on_pushButton_2_clicked();//desconecta e conecta novamente
 
-        MainWindow::on_pushButton_2_clicked();
-        MainWindow::on_pushButton_2_clicked();
-
-
-        qDebug() << readData << endl << serialize << endl;
-        qDebug() << ((readData == serialize) ? "Iguais" : "Diferentes");
-       if (readData == serialize)
-       {
+    qDebug() << "Dado lido e dado enviado:" << endl << readData << endl << serialize << endl;
+    if (readData == serialize)
+    {
         QMessageBox::information(this, "tDCS", "Dados salvos com sucesso!");
     }
     else
@@ -121,7 +115,6 @@ void MainWindow::on_pushButton_4_clicked()//Botão salvar
         QMessageBox::warning(this, "tDCS", "Não foi possível salvar os dados, favor conferir a conexão.");
     }
 }
-
 
 void MainWindow::initVars()
 {
@@ -134,9 +127,7 @@ void MainWindow::initVars()
 
 bool  MainWindow::connect()
 {
-    qDebug() << "Entered connect func" << endl;
     const auto serialPortInfos = QSerialPortInfo::availablePorts();
-
     for (const QSerialPortInfo &serialPortInfo : serialPortInfos)
     {
         description = serialPortInfo.description();
@@ -147,23 +138,20 @@ bool  MainWindow::connect()
         auto serialScan = QStringLiteral("Description: %1\n  Manufacturer: %2\n    serialNumber: %3 \n vendorId: %4\n").arg(description).arg(manufacturer).arg(serialNumber).arg(vendorId);
         qDebug() << serialScan << endl;
 
+        //if(description=="Virtual Serial Port 9 (Electronic Team)" && manufacturer=="Electronic Team")
         //if(description=="USB-SERIAL CH340" && manufacturer=="wch.cn" && vendorId == "\u0086")
         if(description=="Silicon Labs CP210x USB to UART Bridge" && manufacturer=="Silicon Labs")
-
-       //if(description=="Virtual Serial Port 9 (Electronic Team)" && manufacturer=="Electronic Team")
         {
             serialPortId = serialPortInfo.portName();
             qDebug()  << "Port: " << serialPortInfo.portName() << endl;
             return(MainWindow::configSerial(serialPortId));
         }
     }
-
     return false;//To avoid warning (non-void function)
 }
 
 bool  MainWindow::configSerial(QString serialPortName)
 {
-    qDebug() << "Entered configSerial func" << endl;
     if(serialPort.isOpen())
     {
         return true;
@@ -181,17 +169,9 @@ bool  MainWindow::configSerial(QString serialPortName)
 
 }
 
-
-//TODO: Salvando mesmo quando não há resposta
-
 bool MainWindow::writeToSerial(QString msg)
 {
-
-    qDebug() << "Entered write func" << endl;
     const qint64 bytesWritten = serialPort.write(msg.toUtf8());
-
-
-
     if (bytesWritten == -1)
     {
         qDebug() << QObject::tr("Failed to write the data to port %1, error: %2")
@@ -213,10 +193,9 @@ bool MainWindow::writeToSerial(QString msg)
 
 bool MainWindow::readFromSerial()
 {
-    qDebug() << "Entered read func" << endl;
      MainWindow::writeToSerial("@R\n");
      readData = serialPort.readAll();
-     while (serialPort.waitForReadyRead(3000) )
+     while (serialPort.waitForReadyRead(2000) )
      {
         readData.append(serialPort.readAll());
     }
@@ -231,18 +210,15 @@ bool MainWindow::readFromSerial()
                            .arg(serialPort.portName()) << endl;
          return false;
      }
-
-
      qDebug() << QObject::tr("Data successfully received from port %1")
                        .arg(serialPort.portName()) << endl;
      qDebug() << readData << endl;
-
      return MainWindow::refreshData();
 }
 
 bool MainWindow::refreshData()
 {
-    if(readData.size() < 20)
+    if(readData.size() < 30)
     {
         return false;
     }
@@ -251,9 +227,9 @@ bool MainWindow::refreshData()
         auto parts = readData.split('#');
 
         QDateTime parts3, parts4, parts5;
-        parts3.setTime_t(parts[3].toInt());
-        parts4.setTime_t(parts[4].toInt());
-        parts5.setTime_t(parts[5].toInt());
+        parts3.setSecsSinceEpoch(parts[3].toInt());
+        parts4.setSecsSinceEpoch(parts[4].toInt());
+        parts5.setSecsSinceEpoch(parts[5].toInt());
 
         auto dateStart =  parts3.toString(Qt::SystemLocaleShortDate).split(' ');//Divide as Strings em 2 partes: data/hora
         auto dateEnd =  parts4.toString(Qt::SystemLocaleShortDate).split(' ');
@@ -271,9 +247,14 @@ bool MainWindow::refreshData()
     }
 }
 
-void MainWindow::delay()
+void MainWindow::delay_ms(int time)//Função auxiliar para delay em milissegundos
 {
-    QTime dieTime= QTime::currentTime().addMSecs(2000);
+    QTime dieTime= QTime::currentTime().addMSecs(time);
     while (QTime::currentTime() < dieTime)
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+}
+
+void MainWindow::delay_s(int time)//Função auxiliar para delay em segundos
+{
+    MainWindow::delay_ms(1000*time);
 }

@@ -30,7 +30,9 @@ public:
 
     bool refreshData();
 
-    void delay();
+    void delay_ms(int);
+
+    void delay_s(int);
 
 private slots:
     void on_pushButton_2_clicked();
