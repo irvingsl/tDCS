@@ -1,66 +1,26 @@
-language: cpp
-os: linux
-compiler: gcc
-sudo: required
-dist: trusty
+# This will run on Travis' 'new' container-based infrastructure
+sudo: false 
 
-#env:
-#  global:
-#    - secure: "l8AMWeXFS44lRVk/5uXbUFdAp1x/xCvCaLB0/VS57jGN66L/vofCXt8om3HlaWJ494O5r3FYxGiyIseTRr3GsWFQlJES9lfEdauPx6UhtaZBdzrnZgj79yVUAGIWxCchzYnsCk67+nZHcqnjDsc2ml84c/XcntcRiv+UMev3IpwOfg0vMRGOFg3+WQESbrL5a/RyRYR5C6dEPZdmRLP7yw/dqdYDXPDEM1k+Z4Xq6W3vLsEfSd6XFln7lY7yMUbjVQ8PBCttDXqu7oQwD9VnRFntlcx2MA82lAZm9xnRztoARWZTcmE4uLN2glScg/EEL+42gflq1Tpf8HwM414i0TmWiawWZJ6MGKBoeSlsa4COe953yV9ly3HM/P9tQi5FBRABcS52dzvj4DWqWVPw1YeFzQWOxf7Kiwbxrme9bcOpVN16Ipyf51/nvkMTx5zzgeXOjXlMeUeAJ1KDCwp4rkgdeiEzHiEewvt9TxfJqaJrdpxdvOWrrJau+bscL6RuEZUjrksqBetP87pmZAZo6WNrr5xivskplK3dqxsPeVh+O5ymWP4BvK4Wz+wEikRqc72kQsBX9PWwbe41pugloBXV0hykT2jX0fdLhLlUZ4sYw86DA2bdSsmqSAI61j0gfEZrLx0MaSuHdPxPUsWdha50stD8jym8kvt7S7KPvuQ="
+# Blacklist
+branches:
+  only:
+    - master
 
-
+# Install dependencies
 addons:
   apt:
     packages:
-      - cmake
-      - g++-4.8
+      - doxygen
 
-    coverity_scan:
-      project:
-        name: "irvingsl/tDCS"
-        description: "Qt Program to manage a embedded device"
-      notification_email: irvingsslima@gmail.com
-      build_command_prepend: "cov-configure --comptype gcc --compiler gcc-4.8"
-      build_command:   "make VERBOSE=1"
-      branch_pattern: coverity_scan
-
-before_install:
-  # repo for Qt
-  - sudo apt-add-repository --yes ppa:beineri/opt-qt551-trusty
-  - sudo apt-get -qq update
-
-
-install:
-  - sudo apt-get --yes install qt55base qt55imageformats qt55svg
-  - export CXX="g++-4.8"
-  - export CC="gcc-4.8"
-
-  # copy OSG to standard location so that cmake is able to find it
-  #- sudo cp -rv osg-340-deb/lib64 /usr/local/
-  #- sudo cp -rv osg-340-deb/include /usr/local/
-  #- sudo cp -rv osg-340-deb/bin /usr/local/
-
-before_script:
-  # Qt variables
-  - QTDIR="/opt/qt55"
-  - PATH="$QTDIR/bin:$PATH"
-  - source /opt/qt55/bin/qt55-env.sh
-
-  # OpenSceneGraph variables
- # - export LD_LIBRARY_PATH="/usr/local/lib64:/usr/local/lib:$LD_LIBRARY_PATH"
- # - export OPENTHREADS_INC_DIR="/usr/local/include"
- # - export OPENTHREADS_LIB_DIR="/usr/local/lib64:/usr/local/lib"
- # - export PATH="$OPENTHREADS_LIB_DIR:$PATH"
-
-  # cmake build of the project
-  - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/qt55/lib/cmake 
-
+# Build your code e.g. by calling make
 script:
-  - if [[ "${COVERITY_SCAN_BRANCH}" == 1 ]];
-      then
-        echo "Don't build on coverty_scan branch.";
-        exit 0;
-    fi
+  - doxygen Doxyfile
 
-
-  - make
+# Generate and deploy documentation
+deploy:
+  provider: pages
+  skip_cleanup: true
+  local_dir: html
+  github_token: $GH_REPO_TOKEN
+  on:
+    branch: master
