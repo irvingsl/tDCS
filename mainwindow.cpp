@@ -1,20 +1,12 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QMessageBox>
-#include <string>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QJsonDocument>
 #include <QDebug>
-#include <QCryptographicHash>
 #include <QCoreApplication>
 #include <QTextStream>
 #include <QSerialPort>
 #include <QSerialPortInfo>
-#include <QFile>
-#include <QThread>
 #include <QTimer>
-
 
 static QDate today = QDate::currentDate();
 static int totalTime, riseTime;
@@ -110,22 +102,19 @@ void MainWindow::on_pushButton_4_clicked()//Botão salvar
     MainWindow::writeToSerial(serialize);
     MainWindow::delay_ms(2000);
 
-
     MainWindow::on_pushButton_2_clicked();
-    MainWindow::on_pushButton_2_clicked();
-
+    MainWindow::on_pushButton_2_clicked();//desconecta e conecta novamente
 
     qDebug() << "Dado lido e dado enviado:" << endl << readData << endl << serialize << endl;
     if (readData == serialize)
     {
-    QMessageBox::information(this, "tDCS", "Dados salvos com sucesso!");
+        QMessageBox::information(this, "tDCS", "Dados salvos com sucesso!");
     }
     else
     {
-    QMessageBox::warning(this, "tDCS", "Não foi possível salvar os dados, favor conferir a conexão.");
+        QMessageBox::warning(this, "tDCS", "Não foi possível salvar os dados, favor conferir a conexão.");
     }
 }
-
 
 void MainWindow::initVars()
 {
@@ -139,7 +128,6 @@ void MainWindow::initVars()
 bool  MainWindow::connect()
 {
     const auto serialPortInfos = QSerialPortInfo::availablePorts();
-
     for (const QSerialPortInfo &serialPortInfo : serialPortInfos)
     {
         description = serialPortInfo.description();
@@ -159,7 +147,6 @@ bool  MainWindow::connect()
             return(MainWindow::configSerial(serialPortId));
         }
     }
-
     return false;//To avoid warning (non-void function)
 }
 
@@ -182,13 +169,9 @@ bool  MainWindow::configSerial(QString serialPortName)
 
 }
 
-
-//TODO: Salvando mesmo quando não há resposta
-
 bool MainWindow::writeToSerial(QString msg)
 {
     const qint64 bytesWritten = serialPort.write(msg.toUtf8());
-
     if (bytesWritten == -1)
     {
         qDebug() << QObject::tr("Failed to write the data to port %1, error: %2")
@@ -227,12 +210,9 @@ bool MainWindow::readFromSerial()
                            .arg(serialPort.portName()) << endl;
          return false;
      }
-
-
      qDebug() << QObject::tr("Data successfully received from port %1")
                        .arg(serialPort.portName()) << endl;
      qDebug() << readData << endl;
-
      return MainWindow::refreshData();
 }
 
@@ -267,14 +247,14 @@ bool MainWindow::refreshData()
     }
 }
 
-void MainWindow::delay_ms(int time = 1000)
+void MainWindow::delay_ms(int time)//Função auxiliar para delay em milissegundos
 {
     QTime dieTime= QTime::currentTime().addMSecs(time);
     while (QTime::currentTime() < dieTime)
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
 }
 
-void MainWindow::delay_s(int time = 1)
+void MainWindow::delay_s(int time)//Função auxiliar para delay em segundos
 {
     MainWindow::delay_ms(1000*time);
 }

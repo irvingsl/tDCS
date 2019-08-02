@@ -67,7 +67,7 @@
       <underline>false</underline>
      </font>
     </property>
-    <widget class="QWidget" name="layoutWidget">
+    <widget class="QWidget" name="layoutWidget1">
      <property name="geometry">
       <rect>
        <x>2</x>
@@ -112,7 +112,7 @@
      </layout>
     </widget>
    </widget>
-   <widget class="QWidget" name="layoutWidget">
+   <widget class="QWidget" name="layoutWidget2">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -202,7 +202,7 @@
      </item>
     </layout>
    </widget>
-   <widget class="QWidget" name="layoutWidget">
+   <widget class="QWidget" name="layoutWidget3">
     <property name="geometry">
      <rect>
       <x>50</x>
@@ -211,7 +211,7 @@
       <height>49</height>
      </rect>
     </property>
-    <layout class="QGridLayout" name="gridLayout" columnminimumwidth="1,1,1">
+    <layout class="QGridLayout" name="gridLayout1" columnminimumwidth="1,1,1">
      <item row="0" column="0">
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
