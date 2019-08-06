@@ -1,4 +1,14 @@
-#include "mainwindow.h"
+/**
+ * @file mainwindow.cpp
+ * @author Irving Souza Lima (irvingsslima@gmail.com)
+ * @brief Código principal do QT, controla os botões e principalmente a 
+ * comunicação serial com o dispositivo conectado via USB
+ * @version 0.1
+ * @date 2019-08-02
+ * 
+ * @copyright Copyright (c) 2019
+ * 
+ */
 #include "ui_mainwindow.h"
 #include <QMessageBox>
 #include <QDebug>
@@ -16,7 +26,11 @@ static QString description, manufacturer, serialNumber, serialPortId;
 static QSerialPort serialPort;
 static QByteArray readData;
 static quint16 vendorId;
-
+/**
+ * @brief Construct a new Main Window:: Main Window object
+ * 
+ * @param parent 
+ */
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -31,12 +45,22 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->spinBox_2->setValue(totalTime);
 }
 
+/**
+ * @brief Destroy the Main Window:: Main Window object
+ * 
+ */
 MainWindow::~MainWindow()
 {
     delete ui;
 }
 
-
+/**
+ * @brief Quando o botão 2 (Conectar/Desconectar) da UI é clicado, essa função é executada
+ * 
+ * Ela troca as informações na tela, e executa as funções de conectar e ler do dispositivo.
+ * Em caso positivo, ela troca o texto do botão para desconectar, e assim fecha a conexão serial.
+ * 
+ */
 void MainWindow::on_pushButton_2_clicked()//Botão conectar
 {
     static bool btn2 = true;
@@ -71,6 +95,12 @@ void MainWindow::on_pushButton_2_clicked()//Botão conectar
     }
 }
 
+/**
+ * @brief Quando o botão 3 (Limpar) da UI é clicado, essa função é executada
+ * 
+ * Executa a função initVars, que carrega os valores iniciais pras variáveis e os atualiza nos respectivos campos
+ * 
+ */
 void MainWindow::on_pushButton_3_clicked()//Botão limpar
 {
      MainWindow::initVars();
@@ -79,6 +109,13 @@ void MainWindow::on_pushButton_3_clicked()//Botão limpar
      ui->spinBox_2->setValue(totalTime);
 }
 
+/**
+ * @brief Quando o botão 3 (Salvar) da UI é clicado, essa função é executada
+ * 
+ * Ela envia os valores dos campos para o device, espera uma resposta 
+ * e atualiza os respectivos campos em caso da resposta ser a esperada
+ * 
+ */
 void MainWindow::on_pushButton_4_clicked()//Botão salvar
 {    
     ui->statusBar->showMessage("Salvando...");
@@ -116,6 +153,13 @@ void MainWindow::on_pushButton_4_clicked()//Botão salvar
     }
 }
 
+/**
+ * @brief Define valores iniciais pras variáveis que são utilizadas na UI
+ * 
+ * É utilizada principalmente para o funcionamento do botão Limpar,
+ * trazendo as variáveis para valores padrões
+ * 
+ */
 void MainWindow::initVars()
 {
     totalTime = 20;
@@ -125,6 +169,15 @@ void MainWindow::initVars()
     ui->dateEdit_2->setDate(today.addMonths(1));//Seta a segunda data pra daqui a 1 mês
 }
 
+/**
+ * @brief Busca o dispositvo correto e estabelece conexão serial com ele
+ * 
+ * Pesquisa dentre os dispositivos conectados os que atendem aos requisitos
+ * como nome e fabricante, para assim definir a porta em que está conectado
+ * 
+ * 
+ * @return configSerial função que estabelece a conexão com o dispositivo
+ */
 bool  MainWindow::connect()
 {
     const auto serialPortInfos = QSerialPortInfo::availablePorts();
@@ -150,6 +203,13 @@ bool  MainWindow::connect()
     return false;//To avoid warning (non-void function)
 }
 
+/**
+ * @brief Função que define os parâmetros e faz a conexão serial
+ * 
+ * @param serialPortName Identificação da porta em que o dispositivo está conectado
+ * @return true Em caso de conexão bem sucedida com o device
+ * @return false Caso alguma falha ocorra na conexão
+ */
 bool  MainWindow::configSerial(QString serialPortName)
 {
     if(serialPort.isOpen())
@@ -169,6 +229,13 @@ bool  MainWindow::configSerial(QString serialPortName)
 
 }
 
+/**
+ * @brief Função escreve uma string na porta serial e verifica se todos os bytes foram escritos
+ * 
+ * @param msg String que será enviada pela porta serial
+ * @return true Caso todos os bytes sejam colocados na serial
+ * @return false Caso a string esteja vazia, ou caso algum byte falhe
+ */
 bool MainWindow::writeToSerial(QString msg)
 {
     const qint64 bytesWritten = serialPort.write(msg.toUtf8());
@@ -191,6 +258,16 @@ bool MainWindow::writeToSerial(QString msg)
     return false; //To avoid warning (non-void function)
 }
 
+/**
+ * @brief Função que envia um request (@R) para que o dispositivo informe sua configuração
+ * 
+ * O dispositivo está programado para quando receber esse comando (@R) enviar a configuração armazenada
+ * no padrão: corrente#tempo_de_subida#tempo_total#data_inicio#data_fim#data_e_hora_atuais#
+ * o delimitador é a tralha ('#') e os formatos são int#double#double#epoch#epoch#epoch#
+ * 
+ * @return true Caso haja mensagem seja recebida
+ * @return false Caso não haja mensagem recebida ou estoure o tempo de timeout (2 segundos)
+ */
 bool MainWindow::readFromSerial()
 {
      MainWindow::writeToSerial("@R\n");
@@ -216,6 +293,12 @@ bool MainWindow::readFromSerial()
      return MainWindow::refreshData();
 }
 
+/**
+ * @brief Função que atualiza o campo central da tela, com os valores do dispositivo
+ * 
+ * @return true Caso a mensagem seja válida, e os valores atualizados
+ * @return false Caso a mensagem seja menor que 30 caracteres, configurando um erro
+ */
 bool MainWindow::refreshData()
 {
     if(readData.size() < 30)
@@ -247,6 +330,13 @@ bool MainWindow::refreshData()
     }
 }
 
+/**
+ * @brief Função auxiliar que da um delay de milissegundos
+ * 
+ * É utilizada para esperar que o device seja capaz de comunicar com o software
+ * 
+ * @param time Define o número de milissegundos do delay
+ */
 void MainWindow::delay_ms(int time)//Função auxiliar para delay em milissegundos
 {
     QTime dieTime= QTime::currentTime().addMSecs(time);
@@ -254,6 +344,11 @@ void MainWindow::delay_ms(int time)//Função auxiliar para delay em milissegund
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
 }
 
+/**
+ * @brief Função auxiliar que da um delay de segundos
+ * 
+ * @param time Define o número de segundos do delay
+ */
 void MainWindow::delay_s(int time)//Função auxiliar para delay em segundos
 {
     MainWindow::delay_ms(1000*time);
